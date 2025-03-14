@@ -1,0 +1,33 @@
+server:
+  port: 8080
+
+bot:
+  name: ${BOT_NAME:BrainBuster_bot}
+  token: ${BOT_TOKEN:5875373137:AAGZh66u-2hixIyp7VSir41g7X2xfhuog-s}
+  admin:
+    id: ${BOT_NAME:674694300}
+
+#rest:
+#  enabled: true
+
+grpc:
+  enabled: true
+  client:
+    questGrpcService:
+      address: "static://localhost:9091"
+      negotiationType: plaintext
+
+spring:
+  application:
+    name: ${SPRING_APPLICATION_NAME:telegram_message_dispatcher}
+
+
+  datasource:
+    url: jdbc:postgresql://localhost:5435/user_requests
+    driver-class-name: org.postgresql.Driver
+    password: postgres
+    username: postgres
+  jpa:
+    hibernate:
+      ddl-auto: update
+   # show-sql: true

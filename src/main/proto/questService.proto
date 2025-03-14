@@ -1,0 +1,159 @@
+syntax = "proto3";
+
+option java_multiple_files = true;
+option java_package = "ru.quest_bot.grpc";
+option java_outer_classname = "QuestServiceProto";
+
+service QuestService {
+  rpc processUpdate(GrpcUpdateData) returns (GrpcResponseData);
+}
+
+message GrpcUpdateData {
+  string receive_time = 1;
+  GrpcTelegramUser from = 2;
+  GrpcTelegramMessage message = 3;
+  GrpcTelegramCallbackQuery callback_query = 4;
+  GrpcTelegramPollAnswer poll_answer = 5;
+}
+
+message GrpcTelegramPollAnswer {
+  string poll_id = 1;
+  repeated int32 option_ids = 2;
+}
+
+message GrpcTelegramMessage {
+  int32 message_id = 1;
+  bool edited_message = 2;
+  int64 chat_id = 3;
+  int32 date = 4;
+  string text = 5;
+  GrpcBasicFile file = 6;
+  bool has_media_spoiler = 7;
+  repeated GrpcTelegramPhotoSize photo = 8;
+  string media_group_id = 9;
+  string caption = 10;
+  GrpcTelegramLocation location = 11;
+  bool successful_payment = 12;
+}
+
+message GrpcTelegramCallbackQuery {
+  string data = 1;
+}
+
+message GrpcBasicFile {
+  GrpcTelegramFileType telegram_file_type = 1;
+  string file_id = 2;
+  string file_unique_id = 3;
+  int32 width = 4;
+  int32 height = 5;
+  int32 duration = 6;
+  int64 file_size = 7;
+  string file_name = 8;
+  string mime_type = 9;
+  string type = 10;
+  string emoji = 11;
+  string set_name = 12;
+  bool is_animated = 13;
+  bool is_video = 14;
+  GrpcTelegramPhotoSize thumbnail = 15;
+}
+
+enum GrpcTelegramFileType {
+  ANIMATION = 0;
+  AUDIO = 1;
+  VIDEO = 2;
+  DOCUMENT = 3;
+  STICKER = 4;
+  VOICE = 5;
+}
+
+message GrpcTelegramLocation {
+  double longitude = 1;
+  double latitude = 2;
+  int32 live_period = 3;
+}
+
+message GrpcTelegramPhotoSize {
+  string file_id = 1;
+  string file_unique_id = 2;
+  int32 width = 3;
+  int32 height = 4;
+  int32 file_size = 5;
+  string file_path = 6;
+}
+
+message GrpcTelegramUser {
+  int64 user_id = 1;
+  string first_name = 2;
+  string last_name = 3;
+  string user_name = 4;
+  string language_code = 5;
+}
+
+
+//------------------------------------------------
+//------------------------------------------------
+//                   RESPONSE
+//------------------------------------------------
+//------------------------------------------------
+message GrpcResponseMessageData {
+  GrpcMessageType message_type = 1;
+  int32 message_id = 2;
+  int64 chat_id = 3;
+  string inline_message_id = 4;
+  string text = 5;
+  string parse_mode = 6;
+  GrpcKeyboardMarkupData reply_markup = 7;
+  GrpcPollData poll_dto = 8;
+  GrpcBasicFile file = 9;
+  bool has_media_spoiler = 10;
+}
+
+message GrpcResponseData {
+  repeated GrpcResponseMessageData message_list = 1;
+}
+
+message GrpcPollData {
+  string question = 1;
+  repeated string options = 2;
+  bool is_anonymous = 3;
+  string type = 4;
+  bool allow_multiple_answers = 5;
+  int32 correct_option_id = 6;
+  bool is_closed = 7;
+  int32 open_period = 8;
+  string explanation = 9;
+  string explanation_parse_mode = 10;
+  bool protect_content = 11;
+}
+
+enum GrpcMessageType {
+  POLL = 0;
+  MESSAGE = 1;
+  EDIT_MESSAGE = 2;
+  DELETE = 3;
+}
+
+enum GrpcKeyboardType {
+  REPLY_ADD = 0;
+  REPLY_REMOVE = 1;
+  INLINE = 2;
+}
+
+message GrpcKeyboardButtonData {
+  string text = 1;
+  string url = 2;
+  string callback_data = 3;
+}
+
+message GrpcKeyboardMarkupData {
+  GrpcKeyboardType keyboard_type = 1;
+  repeated GrpcKeyboardRowData keyboard_rows = 2;
+  int32 row_width = 3;
+  bool resize_keyboard = 4;
+  bool remove_keyboard = 5;
+}
+
+message GrpcKeyboardRowData {
+  repeated GrpcKeyboardButtonData buttons = 1;
+}
