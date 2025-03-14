@@ -29,10 +29,8 @@ public class UpdateDataService<Response, Request> {
         UpdateDataEntity entity = saveUserRequest(update);
 
         Request request = mapper.toTransportData(update);
-        System.out.println("request: "+request);
         Response response = sendRequest(request, entity);
         deleteUserRequest(entity);
-        System.out.println("response: "+response);
 
         if (response != null) {
             sendResponse(response);
