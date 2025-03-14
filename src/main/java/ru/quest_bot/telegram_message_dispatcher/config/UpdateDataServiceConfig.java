@@ -24,6 +24,27 @@ import ru.quest_bot.telegram_message_dispatcher.service.UpdateDataService;
 @Configuration
 public class UpdateDataServiceConfig {
 
+ /**
+     * Основной класс обмена сообщениями. Принимает сообщения из телеги, отправляет в другой сервис и в случае синхронной
+     * реализации возвращает ответ пользователю
+     * <p>
+     * Представляет собой некоторую адаптацию паттерна Outbox: входяшие от телеграмма сообщения записываются в базу и
+     * отправляются в сервис обработки. Если отправка успешна - данные удаляются из базы, в противном случае - остаются
+     * и пытаются отправиться по таймеру спустя какое-то время.
+     * <p>
+     * Оперирует сущностями базы данных поскольку запросы не подвергаются изменению. Только запись. Следовательно,
+     * сериализуемые данные не могут оказаться неперсистентными
+     *
+     * @param mapper            - класс маппинга данных
+     * @param repositoryService - репозиторий для взаимодействия с БД
+     * @param questFeignClient  - клиент отправки сообщений сервису обработки
+     * @param responseDataService - сервис отправки сообщеий в бота
+     * @return бин скласса управления передачей соообщений
+     */
+
+
+    
+    
     @Bean
     @ConditionalOnProperty(name = "rest.enabled", havingValue = "true")
     public UpdateDataService<ResponseData, UpdateData> restAsyncUpdateDataService(
@@ -51,224 +72,6 @@ public class UpdateDataServiceConfig {
         return new UpdateDataService<>(mapper, repositoryService, responseDataService, grpcClient);
     }
 
-
-    /**
-     * Основной класс обмена сообщениями. Принимает сообщения из телеги, отправляет в другой сервис и в случае синхронной
-     * реализации возвращает ответ пользователю
-     * <p>
-     * Представляет собой некоторую адаптацию паттерна Outbox: входяшие от телеграмма сообщения записываются в базу и
-     * отправляются в сервис обработки. Если отправка успешна - данные удаляются из базы, в противном случае - остаются
-     * и пытаются отправиться по таймеру спустя какое-то время.
-     * <p>
-     * Оперирует сущностями базы данных поскольку запросы не подвергаются изменению. Только запись. Следовательно,
-     * сериализуемые данные не могут оказаться неперсистентными
-     *
-     * @param mapper            - класс маппинга данных
-     * @param questFeignClient  - клиент отправки сообщений сервису обработки
-     * @param repositoryService - репозиторий для взаимодействия с БД
-     * @return бин скласса управления передачей соообщений
-     */
-//    @Bean("asyncRestService")
-//    @ConditionalOnProperty(name = "async.enabled", havingValue = "true")
-//    UpdateDataService getAsyncRestUpdateDataService(@Qualifier("restDataMapper") BasicQuestDataMapper<ResponseData, UpdateData> mapper,
-//                                                    QuestFeignClient questFeignClient,
-//                                                    UpdateDataLogRepositoryService repositoryService,
-//                                                    @Lazy ResponseDataService responseDataService) {
-//
-//        UpdateDataService.UpdateDataHandler handler = new UpdateDataService.UpdateDataHandler() {
-//            @Override
-//            @Transactional
-//            public void processUpdateData(Update update) {
-//                UpdateDataEntity updateDataEntity = mapper.toEntity(update);
-//                UpdateData updateData = mapper.toTransportData(update);
-//
-//                try {
-//                    updateDataEntity = repositoryService.save(updateDataEntity);
-//                } catch (Exception e) {
-//                    log.error("Ошибка сохранения в базу данных: []", e);
-//
-//                    try {
-//                        responseDataService.sendMessage(responseDataService.sendErrorMessage(update));
-//                    } catch (TelegramApiException ex) {
-//                        throw new RuntimeException(ex);
-//                    }
-//                    return;
-//                }
-//
-//                try {
-//                    questFeignClient.sendUpdateData(updateDataEntity); // Отправляем данные сервису обработки
-//                    repositoryService.delete(updateDataEntity); // Если всё прошло успешно, удаляем запись из базы
-//                } catch (FeignException e) {
-//                    log.error("Ошибка при вызове Feign-клиента: []", e);
-//                }
-//            }
-//        };
-//
-//        return new UpdateDataService(handler, mapper, repositoryService, responseDataService);
-//    }
-//
-//    @Bean("grpcService")
-//    @ConditionalOnProperty(name = "grpc.enabled", havingValue = "true")
-//    UpdateDataService getGrpsSyncUpdateDataService(@Qualifier("grpcDataMapper") BasicQuestDataMapper<GrpcResponseData, GrpcUpdateData> mapper,
-//                                                   UpdateDataLogRepositoryService repositoryService,
-//                                                   QuestGrpcClient client,
-//                                                   @Lazy ResponseDataService responseDataService) {
-//
-//
-//        UpdateDataService.UpdateDataHandler handler = new UpdateDataService.UpdateDataHandler() {
-//
-//            @Override
-//            @Transactional
-//            public void processUpdateData(Update update) {
-//                UpdateDataEntity updateDataEntity = mapper.toEntity(update);
-//
-//                try {
-//                    updateDataEntity = repositoryService.save(updateDataEntity);
-//                } catch (Exception e) {
-//                    log.error("Ошибка сохранения в базу данных: []", e);
-//
-//                    try {
-//                        responseDataService.sendMessage(responseDataService.sendErrorMessage(update));
-//                    } catch (TelegramApiException ex) {
-//                        log.error("Ошибка Telegram при отправке сообщения об ошибке: []", e);
-//                    }
-//
-//                    return;
-//                }
-//
-//                GrpcUpdateData grpcUpdateData = mapper.toTransportData(update);
-//                GrpcResponseData responseData = null;
-//
-//                try {
-//                    responseData = client.sendMessage(grpcUpdateData); // Отправляем данные сервису обработки
-//                    repositoryService.delete(updateDataEntity); // Если всё прошло успешно, удаляем запись из базы
-//                } catch (Exception e) {
-//                    log.error("Ошибка gRPC запроса: []", e);
-//                    return;
-//                }
-//
-//                List<PartialBotApiMethod<?>> messageList = mapper.toTelegramMessage(responseData);
-//                try {
-//                    if (messageList != null) {
-//                        responseDataService.sendMessage(messageList);
-//                    }
-//                } catch (TelegramApiException e) {
-//                    log.error("Ошибка Telegram при отправке ответа: []", e);
-//                }
-//            }
-//        };
-//
-//        return new UpdateDataService(handler, mapper, repositoryService, responseDataService);
-//    }
-//
-//
-////    @Bean("asyncRestService")
-////    @ConditionalOnProperty(name = "async.enabled", havingValue = "true")
-////    UpdateDataService getAsyncRestUpdateDataService(@Qualifier("restDataMapper") BasicQuestDataMapper<ResponseData, UpdateData> mapper,
-////                                                    QuestFeignClient questFeignClient,
-////                                                    UpdateDataLogRepositoryService repositoryService,
-////                                                    @Lazy ResponseDataService responseDataService) {
-////
-////        UpdateDataService.UpdateDataHandler handler = new UpdateDataService.UpdateDataHandler() {
-////            @Override
-////            @Transactional
-////            public void processUpdateData(Update update) {
-////                UpdateDataEntity updateDataEntity = mapper.toEntity(update);
-////                UpdateData updateData = mapper.toTransportData(update);
-////
-////                try {
-////                    updateDataEntity = repositoryService.save(updateDataEntity);
-////                } catch (Exception e) {
-////                    log.error("Ошибка сохранения в базу данных: []", e);
-////
-////                    try {
-////                        responseDataService.sendMessage(sendErrorMessage(update));
-////                    } catch (TelegramApiException ex) {
-////                        throw new RuntimeException(ex);
-////                    }
-////                    return;
-////                }
-////
-////                try {
-////                    questFeignClient.sendUpdateData(updateDataEntity); // Отправляем данные сервису обработки
-////                    repositoryService.delete(updateDataEntity); // Если всё прошло успешно, удаляем запись из базы
-////                } catch (FeignException e) {
-////                    log.error("Ошибка при вызове Feign-клиента: []", e);
-////                }
-////            }
-////        };
-////
-////        return new UpdateDataService(handler, mapper, repositoryService, responseDataService);
-////    }
-////
-////    @Bean("grpcService")
-////    @ConditionalOnProperty(name = "grpc.enabled", havingValue = "true")
-////    UpdateDataService getGrpsSyncUpdateDataService(@Qualifier("grpcDataMapper") BasicQuestDataMapper<GrpcResponseData, GrpcUpdateData> mapper,
-////                                                   UpdateDataLogRepositoryService repositoryService,
-////                                                   QuestGrpcClient client,
-////                                                   @Lazy ResponseDataService responseDataService) {
-////
-////        UpdateDataService updateDataService = new UpdateDataService();
-////        UpdateDataService.UpdateDataHandler handler = new UpdateDataService.UpdateDataHandler() {
-////            @Override
-////            @Transactional
-////            public void processUpdateData(Update update) {
-////                UpdateDataEntity updateDataEntity = mapper.toEntity(update);
-////
-////                try {
-////                    updateDataEntity = repositoryService.save(updateDataEntity);
-////                } catch (Exception e) {
-////                    log.error("Ошибка сохранения в базу данных: []", e);
-////
-////                    try {
-////                        responseDataService.sendMessage(sendErrorMessage(update));
-////                    } catch (TelegramApiException ex) {
-////                        log.error("Ошибка Telegram при отправке сообщения об ошибке: []", e);
-////                    }
-////
-////                    return;
-////                }
-////
-////                GrpcUpdateData grpcUpdateData = mapper.toTransportData(update);
-////                GrpcResponseData responseData = null;
-////
-////                try {
-////                    responseData = client.sendMessage(grpcUpdateData); // Отправляем данные сервису обработки
-////                    repositoryService.delete(updateDataEntity); // Если всё прошло успешно, удаляем запись из базы
-////                } catch (Exception e) {
-////                    log.error("Ошибка gRPC запроса: []", e);
-////                    return;
-////                }
-////
-////                List<PartialBotApiMethod<?>> messageList = mapper.toTelegramMessage(responseData);
-////                try {
-////                    if (messageList != null) {
-////                        responseDataService.sendMessage(messageList);
-////                    }
-////                } catch (TelegramApiException e) {
-////                    log.error("Ошибка Telegram при отправке ответа: []", e);
-////                }
-////            }
-////        };
-////
-////        updateDataService.setHandler(handler);
-////        return updateDataService;
-////    }
-////
-////    private List<SendMessage> sendErrorMessage(Update update) {
-////        Long userChatId = update.hasMessage() ? update.getMessage().getChatId() : update.getCallbackQuery().getMessage().getChatId();
-////        return List.of(SendMessage.builder()
-////                        .chatId(userChatId)
-////                        .text("К сожалению, сервис в данное время недоступен.")
-////                        .build(),
-////                SendMessage.builder()
-////                        .chatId(adminID)
-////                        .text("База данных недступна: " + LocalDateTime
-////                                .now()
-////                                .format(DateTimeFormatter.ofPattern("yy.MM.dd hh:mm:ss")))
-////                        .build());
-////
-////    }
 
 
 }
